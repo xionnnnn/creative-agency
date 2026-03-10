@@ -7,34 +7,27 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     exit();
 }
 
-// Handle status update
-if (isset($_POST['update_status'])) {
-    $inquiry_id = (int)$_POST['inquiry_id'];
-    $status = $conn->real_escape_string($_POST['status']);
-    
-    $update_sql = "UPDATE inquiries SET status='$status' WHERE inquiry_id=$inquiry_id";
-    $conn->query($update_sql);
-}
-
 // Handle delete
 if (isset($_GET['delete'])) {
-    $inquiry_id = (int)$_GET['delete'];
-    $delete_sql = "DELETE FROM inquiries WHERE inquiry_id = $inquiry_id";
+    $package_id = (int)$_GET['delete'];
+    $delete_sql = "DELETE FROM packages WHERE package_id = $package_id";
     if ($conn->query($delete_sql)) {
-        $success_message = "Inquiry deleted successfully!";
+        $success_message = "Package deleted successfully!";
+    } else {
+        $error_message = "Error deleting package.";
     }
 }
 
-// Get all inquiries
-$inquiries_sql = "SELECT * FROM inquiries ORDER BY created_at DESC";
-$inquiries_result = $conn->query($inquiries_sql);
+// Get all packages
+$packages_sql = "SELECT * FROM packages ORDER BY created_at DESC";
+$packages_result = $conn->query($packages_sql);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Inquiries - Admin</title>
+    <title>Manage Packages - Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../assets/css/style.css">
@@ -55,7 +48,7 @@ $inquiries_result = $conn->query($inquiries_sql);
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="manage_packages.php">
+                            <a class="nav-link active" href="manage_packages.php">
                                 <i class="fas fa-box"></i> Packages
                             </a>
                         </li>
@@ -65,7 +58,7 @@ $inquiries_result = $conn->query($inquiries_sql);
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link active" href="manage_inquiries.php">
+                            <a class="nav-link" href="manage_inquiries.php">
                                 <i class="fas fa-question-circle"></i> Inquiries
                             </a>
                         </li>
@@ -91,54 +84,58 @@ $inquiries_result = $conn->query($inquiries_sql);
             <!-- Main content -->
             <main class="col-md-10 ms-sm-auto px-md-4">
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">Manage Inquiries</h1>
+                    <h1 class="h2">Manage Packages</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <a href="add_package.php" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus"></i> Add New Package
+                        </a>
+                    </div>
                 </div>
 
                 <?php if (isset($success_message)): ?>
                     <div class="alert alert-success"><?php echo $success_message; ?></div>
                 <?php endif; ?>
+                
+                <?php if (isset($error_message)): ?>
+                    <div class="alert alert-danger"><?php echo $error_message; ?></div>
+                <?php endif; ?>
 
                 <div class="card">
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-hover" id="inquiriesTable">
+                            <table class="table table-hover" id="packagesTable">
                                 <thead>
                                     <tr>
                                         <th>ID</th>
-                                        <th>Date</th>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Message</th>
-                                        <th>Status</th>
+                                        <th>Image</th>
+                                        <th>Package Name</th>
+                                        <th>Description</th>
+                                        <th>Price</th>
+                                        <th>Created At</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php if ($inquiries_result->num_rows > 0): ?>
-                                        <?php while($inq = $inquiries_result->fetch_assoc()): ?>
+                                    <?php if ($packages_result->num_rows > 0): ?>
+                                        <?php while($package = $packages_result->fetch_assoc()): ?>
                                         <tr>
-                                            <td><?php echo $inq['inquiry_id']; ?></td>
-                                            <td><?php echo date('M d, Y h:i A', strtotime($inq['created_at'])); ?></td>
-                                            <td><?php echo htmlspecialchars($inq['name']); ?></td>
-                                            <td><?php echo $inq['email']; ?></td>
-                                            <td><?php echo htmlspecialchars($inq['message']); ?></td>
+                                            <td><?php echo $package['package_id']; ?></td>
                                             <td>
-                                                <form method="POST" style="display: inline;">
-                                                    <input type="hidden" name="inquiry_id" value="<?php echo $inq['inquiry_id']; ?>">
-                                                    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
-                                                        <option value="pending" <?php echo $inq['status'] == 'pending' ? 'selected' : ''; ?>>Pending</option>
-                                                        <option value="replied" <?php echo $inq['status'] == 'replied' ? 'selected' : ''; ?>>Replied</option>
-                                                    </select>
-                                                    <input type="hidden" name="update_status" value="1">
-                                                </form>
+                                                <img src="<?php echo $package['package_image'] ? '../' . $package['package_image'] : '../assets/images/placeholder.jpg'; ?>" 
+                                                     style="width: 50px; height: 50px; object-fit: cover;">
                                             </td>
+                                            <td><?php echo htmlspecialchars($package['package_name']); ?></td>
+                                            <td><?php echo substr(htmlspecialchars($package['description']), 0, 50); ?>...</td>
+                                            <td>₱<?php echo number_format($package['price'], 2); ?></td>
+                                            <td><?php echo date('M d, Y', strtotime($package['created_at'])); ?></td>
                                             <td>
-                                                <a href="mailto:<?php echo $inq['email']; ?>" class="btn btn-sm btn-info">
-                                                    <i class="fas fa-reply"></i>
+                                                <a href="edit_package.php?id=<?php echo $package['package_id']; ?>" 
+                                                   class="btn btn-sm btn-warning">
+                                                    <i class="fas fa-edit"></i>
                                                 </a>
-                                                <a href="?delete=<?php echo $inq['inquiry_id']; ?>" 
-                                                   class="btn btn-sm btn-danger"
-                                                   onclick="return confirm('Delete this inquiry?')">
+                                                <a href="?delete=<?php echo $package['package_id']; ?>" 
+                                                   class="btn btn-sm btn-danger" 
+                                                   onclick="return confirm('Are you sure you want to delete this package?')">
                                                     <i class="fas fa-trash"></i>
                                                 </a>
                                             </td>
@@ -160,9 +157,7 @@ $inquiries_result = $conn->query($inquiries_sql);
     <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
     <script>
     $(document).ready(function() {
-        $('#inquiriesTable').DataTable({
-            order: [[1, 'desc']]
-        });
+        $('#packagesTable').DataTable();
     });
     </script>
 </body>
